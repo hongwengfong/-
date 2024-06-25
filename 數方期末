@@ -1,0 +1,56 @@
+import numpy as np
+import matplotlib.pyplot as plt#繪圖
+from mpl_toolkits.mplot3d import Axes3D#3D繪圖
+
+# 定義問題參數
+a = 110  # 擴散係數
+length = 50  # 房間長度 (m)
+time = 10  # 總時間 (秒)
+nodes = 20  # 每個維度上的節點數
+
+# 初始化
+dx = length / nodes
+dy = length / nodes
+dz = length / nodes
+dt = 0.3 * dx * dy * dz / a  # 時間步長根據條件計算出來的
+t_nodes = int(time / dt)#時間步長的數量
+
+u = np.zeros((nodes, nodes, nodes)) + 25  # 房間初始溫度為 25 攝氏度
+
+# 邊界條件，其他邊界保持絕熱，不隨時間變化而變化
+u[0, :, nodes//2:] = 23 # 空調出風口處的溫度
+
+# 初始化3D繪圖
+fig = plt.figure()
+axis = fig.add_subplot(111, projection='3d')
+
+# 創建一個3D網格，用於定位每個節點
+x, y, z = np.meshgrid(np.linspace(0, length, nodes),np.linspace(0, length, nodes),np.linspace(0, length, nodes))
+
+scat = axis.scatter(x, y, z, c=u.flatten(), cmap=plt.cm.jet, vmin=23, vmax=25)#散點圖對象
+fig.colorbar(scat, ax=axis)#顯示顏色映射
+
+counter = 0
+while counter < time:
+    w = u.copy()
+
+    for i in range(1, nodes - 1):
+        for j in range(1, nodes - 1):
+            for k in range(1, nodes - 1):
+                dd_ux = (w[i-1, j, k] - 2 * w[i, j, k] + w[i+1, j, k]) / dx ** 2
+                dd_uy = (w[i, j-1, k] - 2 * w[i, j, k] + w[i, j+1, k]) / dy ** 2
+                dd_uz = (w[i, j, k-1] - 2 * w[i, j, k] + w[i, j, k+1]) / dz ** 2
+
+                u[i, j, k] = dt * a * (dd_ux + dd_uy + dd_uz) + w[i, j, k]
+
+                #更新，打印當前模擬時間和房間內的平均溫度。
+    counter += dt
+
+    print("t: {:.3f} [s], Average temperature: {:.2f} Celcius".format(counter, np.average(u)))
+
+    # 更新數據
+    scat.set_array(u.flatten())
+    axis.set_title("Distribution at t: {:.3f} [s]".format(counter))
+    plt.pause(0.01)
+
+plt.show()
